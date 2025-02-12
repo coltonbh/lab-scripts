@@ -1,20 +1,36 @@
 #!/bin/bash
-# start-workers.sh
-# This script starts Celery workers in daemon mode, one per GPU.
-### USAGE: ./start-workers.sh [queue_name]
+# This script starts BigChem Celery workers in daemon mode, one per GPU.
+# Usage: ./start-bigchem-workers.sh [queue_name] [gpu_list]
+# Example: ./start-bigchem-workers.sh my-queue 0,1,4,7
 # If no queue name is provided, the default queue (celery) is used.
+# If no GPU list is provided, all available GPUs are used.
 
 # Directory to store PID and log files; adjust as needed.
-PID_DIR="/tmp/bigchem_workers"
+PID_DIR="/tmp/$USER/bigchem_workers"
 mkdir -p "$PID_DIR"
 
-# Activate environment, load modules, and source common variables.
-
 # ---------------------------
-# 0. Process command-line argument
+# 0. Process command-line arguments
 # ---------------------------
 QUEUE=${1:-celery}
 echo "Using queue: $QUEUE"
+
+if [ -n "$2" ]; then
+    # Use provided GPU list.
+    # Accept both comma-separated list.
+    GPU_STRING="$2"
+    # Replace commas with spaces, then convert to an array.
+    GPU_STRING=$(echo "$GPU_STRING" | tr ',' ' ')
+    GPUS=($GPU_STRING)
+    echo "Using provided GPUs: ${GPUS[*]}"
+else
+    # Auto-detect available GPUs via nvidia-smi.
+    NUM_GPUS=$(nvidia-smi -L | wc -l)
+    echo "Detected $NUM_GPUS GPUs."
+    # Build an array of GPU indices: 0,1,...,NUM_GPUS-1
+    GPUS=($(seq 0 $((NUM_GPUS - 1))))
+    echo "Using GPU indices: ${GPUS[*]}"
+fi
 
 # ---------------------------
 # 1. Detect current shell
@@ -29,7 +45,7 @@ else
 fi
 echo "Detected shell: $shell_name"
 
-# Initialize micromamba in the current shell
+# Initialize micromamba in the current shell.
 eval "$(micromamba shell hook --shell $shell_name)"
 micromamba activate bigchem
 
@@ -40,17 +56,8 @@ source /home/coltonbh/stacks/bigchem.prod.sh
 ml TeraChem
 
 # ---------------------------
-# 3. Detect available GPUs
+# 3. Start a Celery worker per GPU.
 # ---------------------------
-NUM_GPUS=$(nvidia-smi -L | wc -l)
-echo "Detected $NUM_GPUS GPUs."
-# Build an array of GPU indices: 0,1,2,...,NUM_GPUS-1
-GPUS=($(seq 0 $((NUM_GPUS - 1))))
-# Or manually set GPUs to use on the node.
-# GPUS=(0 1 2 3 4 5 6 7)
-echo "GPU indices: ${GPUS[*]}"
-
-# Start a Celery worker per GPU.
 for gpu in "${GPUS[@]}"; do
     echo "Starting Celery worker on GPU $gpu"
 
@@ -58,7 +65,10 @@ for gpu in "${GPUS[@]}"; do
     PIDFILE="$PID_DIR/celery_worker_${gpu}.pid"
     LOGFILE="$PID_DIR/celery_worker_${gpu}.log"
 
-    # Launch the worker with its unique GPU env var.
+    # Remove the log file if it exists (to avoid appending).
+    rm -f "$LOGFILE"
+
+    # Launch the worker with its unique GPU environment variable.
     env CUDA_VISIBLE_DEVICES=$gpu celery -A bigchem.tasks worker \
         -Q $QUEUE \
         --without-heartbeat --without-mingle --without-gossip \
