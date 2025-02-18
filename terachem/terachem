@@ -1,0 +1,39 @@
+#! /bin/bash
+set -e
+
+# Get the current user's UID and GID
+uid=$(id -u)
+gid=$(id -g)
+
+# Default port mapping
+port_mapping=""
+
+# Check if -s option is provided with a port number
+args=("$@")
+for ((i = 0; i < $#; i++)); do
+    if [[ ${args[$i]} == "-s" ]]; then
+        port=${args[$((i + 1))]}
+        port_mapping="-p $port:$port"
+    fi
+done
+
+# Get the path to the input file, which is always the last argument (ok if a port number is provided)
+input_file_path="${*: -1}"
+
+# Attempt to resolve the directory path. If it fails, use the current working directory
+# Failures capture terachem -v/--version calls
+directory_path="$(dirname '$input_file_path' 2>/dev/null || pwd)"
+absolute_directory_path="$(realpath "$directory_path" 2>/dev/null || echo "$directory_path")"
+
+# If TERACHEM_LICENSE_PATH is set, prepare its bind mount
+if [ -n "$TERACHEM_LICENSE_PATH" ]; then
+    license_bind_mount="-v ${TERACHEM_LICENSE_PATH}:/opt/terachem/license.key"
+else
+    license_bind_mount=""
+fi
+
+# Prepare Docker command
+docker_command="docker run --rm --gpus all -u $uid:$gid $port_mapping -v ${absolute_directory_path}:/scratch $license_bind_mount ${TERACHEM_IMAGE} terachem $*"
+
+# Run Docker command
+eval $docker_command
