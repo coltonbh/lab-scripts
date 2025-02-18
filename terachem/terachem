@@ -1,39 +1,111 @@
-#! /bin/bash
+#!/bin/bash
 set -e
 
-# Get the current user's UID and GID
+# ------------------------------------------------------------------------------
+# terachem
+#
+# This script provides a native-like interface for TeraChem using Docker. You do
+# not need to have TeraChem installed on your system; you only need Docker.
+#
+##### Usage: ####################################################################
+# 1. Place this script as "terachem" in your PATH (e.g. ~/.local/bin/terachem)
+# 2. Make it executable: chmod +x ~/.local/bin/terachem
+# 3. Ensure ~.local/bin is on your path. Add "export PATH=$PATH:~/.local/bin" to
+#    your .bashrc or .zshrc if it is not already there.
+# 4. Optionally, set the TERACHEM_DOCKER_IMAGE environment variable to the TeraChem Docker image
+#    you want to use. For example, add
+#    export TERACHEM_DOCKER_IMAGE=mtzgroup/terachem:1.9-2024.09-dev-1.4-jammy-cuda-11.8.0-sm52-sm61-sm70-sm86-sm89
+#    to your .bashrc or .zshrc. If it is not set, the script will use "mtzgroup/terachem:latest".
+#    Available images can be found at https://hub.docker.com/r/mtzgroup/terachem.
+# 5. Optionally, set the TERACHEM_LICENSE_PATH environment variable to the path of your TeraChem license file.
+#    For example, add "export TERACHEM_LICENSE_PATH=/path/to/license.key" to your .bashrc or .zshrc.
+# 6. Source your .bashrc or .zshrc to apply the changes: source ~/.bashrc
+# 7. Run TeraChem commands as you would natively. For example:
+#    terachem --version
+#    terachem tc.in
+#    terachem -s 11111
+#
+###### Notes: ###################################################################
+# Environment Variables:
+#   TERACHEM_DOCKER_IMAGE         (Required) Docker image to use for TeraChem.
+#   TERACHEM_LICENSE_PATH  (Optional) Path to the TeraChem license file.
+#
+# Special handling:
+#   If the command-line arguments contain a "-s" flag immediately followed by a
+#   port number, the script automatically adds a Docker port mapping for that port.
+#
+# Examples:
+#   terachem --version
+#   terachem -s 11111 input.in
+# ------------------------------------------------------------------------------
+# Set a default for TERACHEM_DOCKER_IMAGE if not provided.
+if [ -z "$TERACHEM_DOCKER_IMAGE" ]; then
+    TERACHEM_DOCKER_IMAGE="mtzgroup/terachem"
+fi
+
+# Get the current user's UID and GID.
 uid=$(id -u)
 gid=$(id -g)
 
-# Default port mapping
-port_mapping=""
-
-# Check if -s option is provided with a port number
+# Process port mapping flag (-s) if present.
+port_mapping=()
 args=("$@")
-for ((i = 0; i < $#; i++)); do
-    if [[ ${args[$i]} == "-s" ]]; then
-        port=${args[$((i + 1))]}
-        port_mapping="-p $port:$port"
+for ((i = 0; i < ${#args[@]}; i++)); do
+    if [[ "${args[$i]}" == "-s" ]]; then
+        if ((i + 1 < ${#args[@]})); then
+            port="${args[$((i + 1))]}"
+            port_mapping=("-p" "${port}:${port}")
+        fi
     fi
 done
 
-# Get the path to the input file, which is always the last argument (ok if a port number is provided)
-input_file_path="${*: -1}"
-
-# Attempt to resolve the directory path. If it fails, use the current working directory
-# Failures capture terachem -v/--version calls
-directory_path="$(dirname '$input_file_path' 2>/dev/null || pwd)"
-absolute_directory_path="$(realpath "$directory_path" 2>/dev/null || echo "$directory_path")"
-
-# If TERACHEM_LICENSE_PATH is set, prepare its bind mount
-if [ -n "$TERACHEM_LICENSE_PATH" ]; then
-    license_bind_mount="-v ${TERACHEM_LICENSE_PATH}:/opt/terachem/license.key"
+# Determine the input file and its directory.
+# We assume the last argument is the input file.
+if [ "$#" -ge 1 ]; then
+    input_arg="${!#}"
+    if [ -e "$input_arg" ]; then
+        input_dir=$(dirname "$(realpath "$input_arg")")
+        input_base=$(basename "$input_arg")
+    else
+        # If the file doesn't exist, fallback to current directory.
+        input_dir=$(realpath "$PWD")
+        input_base="$input_arg"
+    fi
 else
-    license_bind_mount=""
+    # No arguments provided; use current directory.
+    input_dir=$(realpath "$PWD")
+    input_base=""
 fi
 
-# Prepare Docker command
-docker_command="docker run --rm --gpus all -u $uid:$gid $port_mapping -v ${absolute_directory_path}:/scratch $license_bind_mount ${TERACHEM_IMAGE} terachem $*"
+# Build a new arguments array: all arguments except the last, then the basename.
+if [ "$#" -gt 1 ]; then
+    new_args=("${@:1:$#-1}" "$input_base")
+else
+    new_args=("$input_base")
+fi
 
-# Run Docker command
-eval $docker_command
+# Build the Docker command as an array.
+docker_cmd=(docker run --rm --gpus all -u "${uid}:${gid}")
+
+# Add port mapping if applicable.
+if [ ${#port_mapping[@]} -gt 0 ]; then
+    docker_cmd+=("${port_mapping[@]}")
+fi
+
+# Mount the input file's directory as /scratch and set working directory to /scratch.
+docker_cmd+=("-v" "${input_dir}:/scratch" "-w" "/scratch")
+
+# Optionally mount the license file if TERACHEM_LICENSE_PATH is set.
+if [ -n "$TERACHEM_LICENSE_PATH" ]; then
+    license_path="$(echo -n "$TERACHEM_LICENSE_PATH" | xargs)"
+    docker_cmd+=("-v" "${license_path}:/opt/terachem/license.key")
+fi
+
+# Append the Docker image, the "terachem" command, and all user-provided arguments.
+docker_cmd+=("${TERACHEM_DOCKER_IMAGE}" "terachem" "${new_args[@]}")
+
+# Optionally print the full command for debugging.
+# echo "Executing: ${docker_cmd[@]}" >&2
+
+# Execute the command, replacing the current shell.
+exec "${docker_cmd[@]}"
