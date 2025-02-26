@@ -50,8 +50,8 @@ micromamba activate bigchem
 # ---------------------------
 # 2. Load common variables and modules
 # ---------------------------
-# source /home/coltonbh/stacks/bigchem.prod.sh
-# ml TeraChem
+source /home/coltonbh/stacks/bigchem.prod.sh
+ml TeraChem
 
 # ---------------------------
 # 3. Start a Celery worker with forked subprocess workers.
