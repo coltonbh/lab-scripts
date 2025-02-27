@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: sbatch --qos=gpu_normal bigchem-workers-slurm.sh [QUEUE]
+# Usage: sbatch --qos=gpu_normal slurm-bigchem-workers.sh [QUEUE]
 #SBATCH --job-name=bigchem-worker
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4  # Adjust based on your requirements

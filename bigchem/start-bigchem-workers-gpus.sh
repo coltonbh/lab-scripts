@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script starts BigChem Celery workers in daemon mode, one per GPU.
-# Usage: ./start-bigchem-workers.sh [queue_name] [gpu_list]
-# Example: ./start-bigchem-workers.sh my-queue 0,1,4,7
+# Usage: bash ./start-bigchem-workers.sh [queue_name] [gpu_list]
+# Example: bash ./start-bigchem-workers.sh my-queue 0,1,4,7
 # If no queue name is provided, the default queue (celery) is used.
 # If no GPU list is provided, all available GPUs are used.
 

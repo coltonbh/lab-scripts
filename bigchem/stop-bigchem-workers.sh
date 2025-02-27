@@ -1,5 +1,6 @@
 #!/bin/bash
 # This script stops the Celery workers started by start-bigchem-workers.sh.
+# Usage: bash ./stop-bigchem-workers.sh
 
 PID_DIR="/tmp/$USER/bigchem_workers"
 
