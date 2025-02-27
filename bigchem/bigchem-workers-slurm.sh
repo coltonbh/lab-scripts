@@ -32,7 +32,7 @@ source /home/coltonbh/stacks/bigchem.prod.sh
 # or use --hostname=%h-$(uuidgen) for globally unique names even if multiple hosts share the same name
 srun env TMPDIR=/tmp celery -A bigchem.tasks worker \
     -Q "$QUEUE" \
-    --hostname=%h-$$ \
+    --hostname=$USER-slurm-%h-$$ \
     --without-heartbeat --without-mingle --without-gossip \
     --loglevel=INFO \
     --logfile="$LOGFILE"

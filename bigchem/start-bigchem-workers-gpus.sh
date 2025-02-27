@@ -71,7 +71,7 @@ for gpu in "${GPUS[@]}"; do
     # Launch the worker with its unique GPU environment variable.
     # --hostname=%h-$$ provides a unique .pidbox queue for each worker even if on the same host. $$ expands to process id.
     env CUDA_VISIBLE_DEVICES=$gpu celery -A bigchem.tasks worker \
-        --hostname=%h-$$ \
+        --hostname=$USER-%h-gpu-$gpu \
         -Q $QUEUE \
         --without-heartbeat --without-mingle --without-gossip \
         --loglevel=INFO --detach \

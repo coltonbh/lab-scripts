@@ -67,7 +67,7 @@ rm -f "$LOGFILE"
 
 # Launch the worker in detached (daemon) mode.
 celery -A bigchem.tasks worker \
-    --hostname=%h-$$ \
+    --hostname=$USER-%h-$$ \
     -Q "$QUEUE" \
     -c "$NUM_WORKERS" \
     --without-heartbeat --without-mingle --without-gossip \
