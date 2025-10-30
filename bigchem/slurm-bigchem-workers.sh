@@ -30,7 +30,7 @@ source /home/coltonbh/stacks/bigchem.prod.sh
 # Start the worker
 # --hostname=%h-$$ provides a unique .pidbox queue for each worker even if on the same host. $$ expands to process id.
 # or use --hostname=%h-$(uuidgen) for globally unique names even if multiple hosts share the same name
-srun env TMPDIR=/tmp celery -A bigchem.tasks worker \
+srun TMPDIR="$TMPDIR" celery -A bigchem.tasks worker \
     -Q "$QUEUE" \
     --hostname=$USER-slurm-%h-$$ \
     --without-heartbeat --without-mingle --without-gossip \
