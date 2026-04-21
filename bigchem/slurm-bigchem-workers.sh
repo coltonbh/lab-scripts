@@ -12,8 +12,10 @@
 # Use the first script argument as the queue, defaulting to "celery" if not provided.
 QUEUE=${1:-celery}
 
-# Setup logging directory
-LOGDIR="bigchem-worker-logs"
+# Setup logging directory; namespace by host so shared filesystems do not
+# collide across multi-node clusters.
+HOSTNAME=$(hostname -s 2>/dev/null || hostname)
+LOGDIR="bigchem-worker-logs/$HOSTNAME"
 [ ! -d "$LOGDIR" ] && mkdir -p "$LOGDIR"
 LOGFILE="$LOGDIR/bigchem-worker-${SLURM_ARRAY_JOB_ID}-${SLURM_ARRAY_TASK_ID}.log"
 

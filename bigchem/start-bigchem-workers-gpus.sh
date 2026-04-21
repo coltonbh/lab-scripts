@@ -5,8 +5,10 @@
 # If no queue name is provided, the default queue (celery) is used.
 # If no GPU list is provided, all available GPUs are used.
 
-# Directory to store PID and log files; adjust as needed.
-PID_DIR="/tmp/$USER/bigchem_workers"
+# Directory to store PID and log files; namespace by host so shared /tmp
+# filesystems do not collide across multi-node clusters.
+HOSTNAME=$(hostname -s 2>/dev/null || hostname)
+PID_DIR="/tmp/$USER/bigchem_workers/$HOSTNAME"
 mkdir -p "$PID_DIR"
 
 # ---------------------------
