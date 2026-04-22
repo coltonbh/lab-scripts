@@ -26,8 +26,12 @@ while IFS= read -r pidfile; do
 
   echo "Sending kill signal to worker with PID $PID (pid file: $pidfile)"
   if ! kill "$PID"; then
-    echo "Failed to send kill signal to PID $PID" >&2
-    kill_failures=$((kill_failures + 1))
+    if kill -0 "$PID" 2>/dev/null; then
+      echo "Failed to send kill signal to PID $PID" >&2
+      kill_failures=$((kill_failures + 1))
+    else
+      echo "PID $PID is not running; treating $pidfile as stale/already stopped."
+    fi
     continue
   fi
   PIDS+=("$PID")
