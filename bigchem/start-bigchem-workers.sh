@@ -2,14 +2,16 @@
 # This script starts a BigChem Celery worker in daemon mode with a specified number
 # of forked subprocess workers.
 #
-# Usage: bash ./start-bigchem-worker.sh [queue_name] [num_workers]
-# Example: bash ./start-bigchem-worker.sh my-queue 4
+# Usage: bash ./start-bigchem-workers.sh [queue_name] [num_workers]
+# Example: bash ./start-bigchem-workers.sh my-queue 4  # NUM_WORKERS=4
 #
 # If no queue name is provided, the default queue ("celery") is used.
 # If no worker count is provided, it defaults to the number of available CPU cores.
 
-# Directory to store PID and log files; adjust as needed.
-PID_DIR="/tmp/$USER/bigchem_workers"
+# Directory to store PID and log files; namespace by host so shared /tmp
+# filesystems do not collide across multi-node clusters.
+HOSTNAME=$(hostname -s 2>/dev/null || hostname)
+PID_DIR="/tmp/$USER/bigchem_workers/$HOSTNAME"
 mkdir -p "$PID_DIR"
 
 # ---------------------------
@@ -76,5 +78,5 @@ celery -A bigchem.tasks worker \
     --logfile="$LOGFILE"
 
 echo "Celery worker started with $NUM_WORKERS subprocesses."
-echo "PID file: $PIDFILE"
-echo "Log file: $LOGFILE"
+echo "PID files can be found in $PID_DIR/."
+echo "Log files can be found in $PID_DIR/."
