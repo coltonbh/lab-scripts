@@ -12,7 +12,7 @@ fi
 
 # Array to hold all the PIDs.
 PIDS=()
-FAILED_PIDS=()
+KILL_FAILED_PIDS=()
 pid_files_found=0
 
 # Loop over all PID files and send kill signal to all workers.
@@ -28,7 +28,7 @@ while IFS= read -r pidfile; do
   if ! kill "$PID"; then
     if kill -0 "$PID" 2>/dev/null; then
       echo "Failed to send kill signal to PID $PID (permission denied or other error)" >&2
-      FAILED_PIDS+=("$PID")
+      KILL_FAILED_PIDS+=("$PID")
     else
       echo "PID $PID is not running; treating $pidfile as stale/already stopped."
     fi
@@ -61,9 +61,9 @@ while true; do
   sleep 1
 done
 
-if [ "${#FAILED_PIDS[@]}" -gt 0 ]; then
+if [ "${#KILL_FAILED_PIDS[@]}" -gt 0 ]; then
   still_running=()
-  for pid in "${FAILED_PIDS[@]}"; do
+  for pid in "${KILL_FAILED_PIDS[@]}"; do
     if kill -0 "$pid" 2>/dev/null; then
       still_running+=("$pid")
     fi
