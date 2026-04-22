@@ -3,7 +3,7 @@
 # of forked subprocess workers.
 #
 # Usage: bash ./start-bigchem-workers.sh [queue_name] [num_workers]
-# Example: bash ./start-bigchem-workers.sh my-queue 4
+# Example: bash ./start-bigchem-workers.sh my-queue 4  # NUM_WORKERS=4
 #
 # If no queue name is provided, the default queue ("celery") is used.
 # If no worker count is provided, it defaults to the number of available CPU cores.

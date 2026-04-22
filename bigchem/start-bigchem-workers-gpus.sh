@@ -1,9 +1,10 @@
 #!/bin/bash
 # This script starts BigChem Celery workers in daemon mode, one per GPU.
-# Usage: bash ./start-bigchem-workers.sh [queue_name] [gpu_list]
-# Example: bash ./start-bigchem-workers.sh my-queue 0,1,4,7
+# Usage: bash ./start-bigchem-workers-gpus.sh [queue_name] [gpu_list] [num_workers]
+# Example: bash ./start-bigchem-workers-gpus.sh my-queue 0,1,4,7 2  # NUM_WORKERS=2
 # If no queue name is provided, the default queue (celery) is used.
 # If no GPU list is provided, all available GPUs are used.
+# If no worker count is provided, each GPU worker defaults to 1 subprocess worker.
 
 # Directory to store PID and log files; namespace by host so shared /tmp
 # filesystems do not collide across multi-node clusters.
@@ -33,6 +34,9 @@ else
     GPUS=($(seq 0 $((NUM_GPUS - 1))))
     echo "Using GPU indices: ${GPUS[*]}"
 fi
+
+NUM_WORKERS=${3:-1}
+echo "Using number of subprocess workers per GPU: $NUM_WORKERS"
 
 # ---------------------------
 # 1. Detect current shell
@@ -74,7 +78,8 @@ for gpu in "${GPUS[@]}"; do
     # --hostname=%h-$$ provides a unique .pidbox queue for each worker even if on the same host. $$ expands to process id.
     CUDA_VISIBLE_DEVICES=$gpu celery -A bigchem.tasks worker \
         --hostname=$USER-%h-gpu-$gpu \
-        -Q $QUEUE \
+        -Q "$QUEUE" \
+        -c "$NUM_WORKERS" \
         --without-heartbeat --without-mingle --without-gossip \
         --loglevel=INFO --detach \
         --pidfile="$PIDFILE" \
