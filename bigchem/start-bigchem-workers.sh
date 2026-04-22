@@ -2,8 +2,8 @@
 # This script starts a BigChem Celery worker in daemon mode with a specified number
 # of forked subprocess workers.
 #
-# Usage: bash ./start-bigchem-worker.sh [queue_name] [num_workers]
-# Example: bash ./start-bigchem-worker.sh my-queue 4
+# Usage: bash ./start-bigchem-workers.sh [queue_name] [num_workers]
+# Example: bash ./start-bigchem-workers.sh my-queue 4
 #
 # If no queue name is provided, the default queue ("celery") is used.
 # If no worker count is provided, it defaults to the number of available CPU cores.
@@ -78,5 +78,5 @@ celery -A bigchem.tasks worker \
     --logfile="$LOGFILE"
 
 echo "Celery worker started with $NUM_WORKERS subprocesses."
-echo "PID file: $PIDFILE"
-echo "Log file: $LOGFILE"
+echo "PID files can be found in $PID_DIR/."
+echo "Log files can be found in $PID_DIR/."

@@ -81,5 +81,6 @@ for gpu in "${GPUS[@]}"; do
         --logfile="$LOGFILE"
 done
 
-echo "All workers started. PID files can be found in $PID_DIR."
-echo "Log files can be found in $PID_DIR."
+echo "All workers started."
+echo "PID files can be found in $PID_DIR/."
+echo "Log files can be found in $PID_DIR/."
